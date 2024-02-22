@@ -10,7 +10,7 @@ insert into roles (role_id, title, dept_id, salary)
 values( 1, "Sales Lead", 1, 100000),
       ( 2, "Salesperson", 1, 80000),
       ( 3, "Lead Engineer", 2, 150000),
-      ( 4, "software Engineeer", 2, 120000),
+      ( 4, "Software Engineeer", 2, 120000),
       ( 5, "Account Manager", 3, 160000),
       ( 6, "Accountant", 3, 125000),
       ( 7, "Legal Team Lead", 4, 250000),

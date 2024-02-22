@@ -22,6 +22,13 @@ const db = mysql.createConnection(
    console.log(`Connected to the courses_db database.`)
 );
 
+let departmentName;
+let managerName;
+let roleID;
+let fname;
+let lname;
+
+
 function viewAllEmployees() {
    db.query(`select E.emp_id, CONCAT(E.fname, ' ', E.lname) AS full_name, R.title, D.dept_name, R.salary, CONCAT(m.fname, ' ', m.lname) AS manager
 FROM employees E
@@ -43,12 +50,7 @@ on E.manager_id = m.emp_id`, (err, results) => {
                salary: employees.salary,
                manager: employees.manager
             }));
-         console.log("\n");
-         console.log("id  Name                 Title                Department           Salary     Manager");
-         console.log("--  -------------------- -------------------- -------------------- ---------  -----------")
-         allEmps.forEach(employee => {
-            console.log(String(employee.emp_id).padEnd(3), employee.full_name.padEnd(20), employee.title.padEnd(20), employee.dept_name.padEnd(20), String(employee.salary).padEnd(10), employee.manager);
-         })
+         console.table(allEmps)
          startingMenu()
       }
    })
@@ -69,11 +71,7 @@ function viewAllRoles() {
                dept_name: roles.dept_name,
                salary: roles.salary
             }));
-         console.log("id  Title                Department           Salary");
-         console.log("--  -------------------  -------------------  --------");
-         allRoles.forEach(role => {
-            console.log(String(role.role_id).padEnd(3), role.title.padEnd(20), role.dept_name.padEnd(20), String(role.salary).padEnd(10));
-         })
+         console.table(allRoles);
          startingMenu();
       }
    })
@@ -82,7 +80,7 @@ function viewAllRoles() {
 function viewAllDepartments() {
 
    console.log("I am going to view all departments");
-   db.query(`select dept_id, dept_name from Departments order by dept_id`, (err, results) => {
+   db.query(`SELECT dept_id, dept_name FROM Departments ORDER BY dept_id`, (err, results) => {
       if (err) {
          console.log(err);
       } else {
@@ -91,154 +89,145 @@ function viewAllDepartments() {
                dept_id: depts.dept_id,
                dept_name: depts.dept_name
             }))
-         console.log("id  Department");
-         console.log("--  ------------------");
-         allDepts.forEach(dept => {
-            console.log(String(dept.dept_id).padEnd(3), dept.dept_name.padEnd(20));
-         })
+         console.table(allDepts);
          startingMenu();
       };
    })
 };
 
 function viewOnlyRoles() {
-   console.log("I have started the viewOnlyRoles function")
-   // Get list of employee roles
-   const roleList = db.query(`SELECT role_id, title FROM roles order by role_id`, (err, results) => {
-      if (err) {
-         console.log(err);
-      } else {
-         const allRoles = results.map(roles => (
-            {
-               role_id: roles.role_id,
-               title: roles.title
-            }))
+   return new Promise((resolve, reject) => {
+      db.query(`SELECT role_id, title FROM roles ORDER BY role_id`, (err, results) => {
+         if (err) {
+            console.log(err);
+         } else {
+            const allRoles = results.map(roles => (
+               {
+                  value: roles.role_id,
+                  name: roles.title
+               }));
 
-         // Build roles into an array that can be used in the inquirer prompt below
-         const roleArray = [];
-         allRoles.forEach(role => roleArray.push(role.title));
-         console.log("roleArray is " + roleArray);
-
-         inquirer.prompt(
-            {
-               type: 'list',
-               message: 'What is the employee\'s role?',
-               name: 'role',
-               choices: roleArray
-            }
-         )
-            .then((response) => {
-               console.log("response.role is " + response.role);
-               return response.role;
-            })
-         // Do not return to main menu!!
-      };
-   });
-
-}
-
-function viewOnlyManagers() {
-   console.log("I have started the viewOnlyManagers function");
-   // Get list of managers (we are assuming here that any employee can be a manager)
-   const managerList = db.query(`SELECT emp_id, CONCAT(E.fname, ' ', E.lname) AS full_name`, (err, results) => {
-      if (err) {
-         console.log(err);
-      } else {
-         const allManagers = results.map(managers => (
-            {
-               value: managers.emp_id,
-               name: managers.full_name
-            }
-         ))
-         const managerArray = [];
-         allManagers.forEach(manager => managerArray.push(manager.name));
-         console.log("managerArray is " + managerArray);
-
-         inquirer.prompt(
-            {
-               type: 'list',
-               message: "Who is the employee's manager?",
-               name: 'manager',
-               choices: managerArray
-            }
-         )
-            .then((response) => {
-               console.log("response.manager is " + response.manager);
-               return response.manager;
-            })
-         // Do not return to main menu!!
-      }
+            inquirer.prompt(
+               {
+                  type: 'list',
+                  message: 'What is the employee\'s role?',
+                  name: 'role',
+                  choices: allRoles
+               }
+            )
+               .then((response) => {
+                  roleID = response.role;
+                  resolve(roleID);
+               })
+               .catch(err => reject(err))
+            // Do not return to main menu!!
+         }
+      })
    })
 };
+
+function viewOnlyManagers() {
+   // Get list of managers (we are assuming here that any employee can be a manager)
+   return new Promise((resolve, reject) => {
+      db.query(`SELECT emp_id, CONCAT(fname, ' ', lname) AS full_name from employees`, (err, results) => {
+         if (err) {
+            console.log(err);
+         } else {
+            const allManagers = results.map(managers => (
+               {
+                  value: managers.emp_id,
+                  name: managers.full_name
+               }
+            ))
+
+            inquirer.prompt(
+               {
+                  type: 'list',
+                  message: "Who is the employee's manager?",
+                  name: 'manager',
+                  choices: allManagers
+               }
+            )
+               .then((response) => {
+                  managerID = response.manager;
+                  resolve(managerID);
+               }).catch(reject);
+            // Do not return to main menu!!
+         }
+      });
+   });
+}
 
 function viewOnlyEmployees() {
    // Get a list of employees (this is exactly the same query the viewOnlyManagers function uses)
-   const managerList = db.query(`SELECT emp_id, CONCAT(E.fname, ' ', E.lname) AS full_name`, (err, results) => {
-      if (err) {
-         console.log(err);
-      } else {
-         const allEmployees = results.map(employees => (
-            {
-               value: employees.emp_id,
-               name: employees.full_name
-            }
-         ))
-         const employeeArray = [];
-         allEmployees.forEach(employee => employeeArray.push(employee.name));
-         console.log("employeeArray is " + employeeArray);
+   return new Promise((resolve, reject) => {
+      db.query(`SELECT emp_id, CONCAT(fname, ' ', lname) AS full_name FROM employees`, (err, results) => {
+         if (err) {
+            console.log(err);
+         } else {
+            const allEmployees = results.map(employees => (
+               {
+                  value: employees.emp_id,
+                  name: employees.full_name
+               }
+            ))
 
-         inquirer.prompt(
-            {
-               type: 'list',
-               message: "Which employee's role do you want to update?",
-               name: 'employee',
-               choices: employeeArray
-            }
-         )
-            .then((response) => {
-               console.log("response.employee is " + response.employee);
-               return response.employee;
-            })
-         // Do not return to main menu!!
-      }
-   })
-};
+            inquirer.prompt(
+               {
+                  type: 'list',
+                  message: "Which employee's role do you want to update?",
+                  name: 'employee',
+                  choices: allEmployees
+               }
+            )
+               .then((response) => {
+                  console.log("response.employee is " + response.employee);
+                  employeeName = response.employee
+                  resolve(employeeName);
+               }).catch(reject);
+            // Do not return to main menu!!
+         }
+      })
+   });
+}
 
 function viewOnlyDepartments() {
    // Get a list of departments)
-   const departmentList = db.query(`SELECT dept_id, dept_name from departments`, (err, results) => {
-      if (err) {
-         console.log(err);
-      } else {
-         const allDepartments = results.map(departments => (
-            {
-               value: departments.dept_id,
-               name: departments.dept_name
-            }
-         ))
-         const departmentArray = [];
-         allDepartments.forEach(department => departmentArray.push(department.name));
-         console.log("departmentArray is " + departmentArray);
+   return new Promise((resolve, reject) => {
+      db.query(`SELECT dept_id, dept_name from departments`, (err, results) => {
+         if (err) {
+            console.log(err);
+         } else {
+            const allDepartments = results.map(departments => (
+               {
+                  value: departments.dept_id,
+                  name: departments.dept_name
+               }
+            ))
+            // const departmentArray = [];
+            // allDepartments.forEach(department => departmentArray.push(department.name));
+            // console.log("departmentArray is " + departmentArray);
 
-         inquirer.prompt(
-            {
-               type: 'list',
-               message: "What department does the role belong to?",
-               name: 'department',
-               choices: departmentArray
-            }
-         )
-            .then((response) => {
-               console.log("response.department is " + response.department);
-               return response.department;
-            })
-         // Do not return to main menu!!
-      }
-   })
+            inquirer.prompt(
+               {
+                  type: 'list',
+                  message: "What department does the role belong to?",
+                  name: 'department',
+                  choices: allDepartments
+               }
+            )
+               .then((response) => {
+                  console.log("response.department is " + response.department);
+                  departmentName = response.department;
+                  resolve(departmentName);
+               }).catch(reject);
+            // Do not return to main menu!!
+         }
+      })
+   });
+}
 
-};
-
-function addEmployee() {
+async function addEmployee() {
    console.log("I am going to add an employee");
 
    inquirer.prompt([
@@ -254,18 +243,30 @@ function addEmployee() {
       },
    ])
       .then((response) => {
-         const fname = response.fname;
-         const lname = response.lname
-         console.log("The new employe name is " + fname + " " + lname);
-         viewOnlyRoles();
-         viewOnlyManagers();
-         // Insert to the employee table
+         fname = response.fname;
+         lname = response.lname;
+      })
+      .then(() => {
+         viewOnlyRoles()
+            // console.log("The role name is " + roleName)
+            .then(() => {
+               viewOnlyManagers()
+                  // console.log("The manager name is " + managerName)
+                  .then((managerName) => {
+                     console.log("The new employee name is " + fname + " " + lname)
+                     console.log("The role is " + roleID)
+                     console.log("The manager name is " + managerID)
+                     insertFields = `fname, lname, role_id, manager_id`;
+                     insertValues = `"${fname}", "${lname}", ${roleID}, ${managerID} `
+                     // Insert to the employee table
+                     insertRecord("employees", insertFields, insertValues)
+                     // startingMenu()
+                  })
+            })
+      })
+};
 
-         startingMenu();
-      });
-}
-
-function addRole() {
+async function addRole() {
    console.log("I am going to add a role");
 
    inquirer.prompt([
@@ -277,17 +278,25 @@ function addRole() {
       {
          type: 'input',
          message: 'What is the salary of the role?',
-         name: 'roleSalary'
+         name: 'salaryAmt'
       },
    ])
-   viewOnlyDepartments();
+      .then((reponse) => {
+         const roleName = response.nameOfRole;
+         const roleSalary = reponse.salaryAmt;
+      })
+      .then(() => {
+         viewOnlyDepartments()
+         console.log("The department name is " + deptName)
+            .then((whatIsThis) => {
+               // Insert to the Roles table
 
-   // Insert to the Roles table
-
-   startingMenu();
+               startingMenu()
+            })
+      })
 };
 
-function addDepartment() {
+async function addDepartment() {
    console.log("I am going to add a department");
 
 
@@ -305,6 +314,14 @@ function updateEmployeeRole() {
    startingMenu();
 };
 
+ function insertRecord(table, fields, values) {
+   console.log(`INSERT INTO ${table} (${fields}) VALUES (${values})`);
+   db.query(`INSERT INTO ${table} (${fields}) VALUES (${values})`, (err, result) => {
+      if (err) {
+         console.log(err)
+      }
+   });
+ }
 
 function startingMenu() {
 
@@ -359,4 +376,5 @@ function startingMenu() {
 
 
 
-startingMenu();
+// startingMenu();
+addEmployee();
