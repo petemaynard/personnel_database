@@ -26,7 +26,7 @@ Contains\
 ![Picture of note taker](./screenshot.gif)
 
 
-## Video of demonstration at https://youtu.be/CBs9buOPTVk
+## Video of demonstration at https://youtu.be/VaFbOQoAQww
 
 ## Repository at https://github.com/petemaynard/personnel_database
 
