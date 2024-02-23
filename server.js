@@ -22,11 +22,14 @@ const db = mysql.createConnection(
    console.log(`Connected to the courses_db database.`)
 );
 
-let departmentName;
-let managerName;
+let departmentID;
+let managerID;
 let roleID;
+let employeeID;
 let fname;
 let lname;
+let roleName;
+let roleSalary;
 
 
 function viewAllEmployees() {
@@ -78,8 +81,6 @@ function viewAllRoles() {
 };
 
 function viewAllDepartments() {
-
-   console.log("I am going to view all departments");
    db.query(`SELECT dept_id, dept_name FROM Departments ORDER BY dept_id`, (err, results) => {
       if (err) {
          console.log(err);
@@ -106,7 +107,6 @@ function viewOnlyRoles() {
                   value: roles.role_id,
                   name: roles.title
                }));
-
             inquirer.prompt(
                {
                   type: 'list',
@@ -139,7 +139,6 @@ function viewOnlyManagers() {
                   name: managers.full_name
                }
             ))
-
             inquirer.prompt(
                {
                   type: 'list',
@@ -181,9 +180,8 @@ function viewOnlyEmployees() {
                }
             )
                .then((response) => {
-                  console.log("response.employee is " + response.employee);
-                  employeeName = response.employee
-                  resolve(employeeName);
+                  employeeID = response.employee
+                  resolve(employeeID);
                }).catch(reject);
             // Do not return to main menu!!
          }
@@ -204,10 +202,6 @@ function viewOnlyDepartments() {
                   name: departments.dept_name
                }
             ))
-            // const departmentArray = [];
-            // allDepartments.forEach(department => departmentArray.push(department.name));
-            // console.log("departmentArray is " + departmentArray);
-
             inquirer.prompt(
                {
                   type: 'list',
@@ -217,9 +211,8 @@ function viewOnlyDepartments() {
                }
             )
                .then((response) => {
-                  console.log("response.department is " + response.department);
-                  departmentName = response.department;
-                  resolve(departmentName);
+                  departmentID = response.department;
+                  resolve(departmentID);
                }).catch(reject);
             // Do not return to main menu!!
          }
@@ -228,8 +221,6 @@ function viewOnlyDepartments() {
 }
 
 async function addEmployee() {
-   console.log("I am going to add an employee");
-
    inquirer.prompt([
       {
          type: 'input',
@@ -248,27 +239,19 @@ async function addEmployee() {
       })
       .then(() => {
          viewOnlyRoles()
-            // console.log("The role name is " + roleName)
             .then(() => {
                viewOnlyManagers()
-                  // console.log("The manager name is " + managerName)
-                  .then((managerName) => {
-                     console.log("The new employee name is " + fname + " " + lname)
-                     console.log("The role is " + roleID)
-                     console.log("The manager name is " + managerID)
+                  .then(() => {     // Used to have managerName in the parentheses
                      insertFields = `fname, lname, role_id, manager_id`;
                      insertValues = `"${fname}", "${lname}", ${roleID}, ${managerID} `
                      // Insert to the employee table
                      insertRecord("employees", insertFields, insertValues)
-                     // startingMenu()
                   })
             })
       })
 };
 
 async function addRole() {
-   console.log("I am going to add a role");
-
    inquirer.prompt([
       {
          type: 'input',
@@ -281,47 +264,61 @@ async function addRole() {
          name: 'salaryAmt'
       },
    ])
-      .then((reponse) => {
-         const roleName = response.nameOfRole;
-         const roleSalary = reponse.salaryAmt;
+      .then((response) => {
+         roleName = response.nameOfRole;
+         roleSalary = response.salaryAmt;
       })
       .then(() => {
          viewOnlyDepartments()
-         console.log("The department name is " + deptName)
-            .then((whatIsThis) => {
+            .then(() => {
                // Insert to the Roles table
-
-               startingMenu()
+               insertFields = `title, dept_id, salary`;
+               insertValues = `"${roleName}", ${departmentID}, ${roleSalary}`
+               insertRecord("roles", insertFields, insertValues);
             })
       })
 };
 
-async function addDepartment() {
-   console.log("I am going to add a department");
-
-
-   startingMenu();
+function addDepartment() {
+   inquirer.prompt(
+      {
+         type: 'input',
+         message: 'What is the name of the department?',
+         name: 'nameOfDept',
+      }
+   )
+   .then((response) => {
+      insertRecord("departments", "dept_name", `"${response.nameOfDept}"`)
+   })
 };
 
-function updateEmployeeRole() {
-   console.log("I am going to update the role of an employee.");
-
-   viewOnlyEmployees();
-   viewOnlyRoles();
-
-   // Update the employee table
-
-   startingMenu();
+async function updateEmployeeRole() {
+   viewOnlyEmployees()
+      .then(() => {
+         viewOnlyRoles()
+            .then(() => {
+               updateRecord("employees", "role_id", roleID, "emp_id", employeeID) 
+            })
+      })
 };
 
- function insertRecord(table, fields, values) {
-   console.log(`INSERT INTO ${table} (${fields}) VALUES (${values})`);
+function insertRecord(table, fields, values) {
    db.query(`INSERT INTO ${table} (${fields}) VALUES (${values})`, (err, result) => {
       if (err) {
          console.log(err)
       }
    });
- }
+   startingMenu()
+}
+
+function updateRecord(table, field1, value1, field2, value2) {
+   db.query(`UPDATE ${table} SET ${field1} = ${value1} WHERE ${field2} = ${value2}`, (err, result) => {
+      if (err) {
+         console.log(err)
+      }
+   })
+   startingMenu()
+}
 
 function startingMenu() {
 
@@ -374,7 +371,5 @@ function startingMenu() {
       })
 };
 
-
-
-// startingMenu();
-addEmployee();
+// Here we go!
+startingMenu();
